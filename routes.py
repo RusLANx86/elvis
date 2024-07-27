@@ -6,10 +6,8 @@ from flasgger import swag_from
 
 from models import User, Achievement, UserAchievement, db
 
-logger = logging.getLogger(__name__)
 
-
-def set_routes(app):
+def set_routes(app, logger):
     @app.route('/')
     def index():
         return '<h1>Started Page</h1>'

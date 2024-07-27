@@ -16,8 +16,12 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:q1w2e3r4@localhos
 # app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.dirname(__file__)}/achievements.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Настройка логирования
+logging.basicConfig(level=logging.INFO, filename='app.log', filemode='w')
+logger = logging.getLogger(__name__)
+
 db.init_app(app)
-set_routes(app)
+set_routes(app, logger)
 
 # Инициализация базы данных и миграций
 if not database_exists(app.config['SQLALCHEMY_DATABASE_URI']):
@@ -29,11 +33,6 @@ with app.app_context():
 
 migrate = Migrate(app, db)
 Swagger(app)
-
-# Настройка логирования
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 
 if __name__ == '__main__':
     app.run(debug=True)

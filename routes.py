@@ -318,7 +318,59 @@ def set_routes(app, logger):
         return jsonify(user_achievements)
 
     @app.route('/stats', methods=['GET'])
+    @swag_from({
+        'responses': {
+            200: {
+                'description': 'Статистические данные системы',
+                'schema': {
+                    'type': 'object',
+                    'properties': {
+                        'max_achievements_user': {
+                            'type': 'object',
+                            'properties': {
+                                'total': {'type': 'integer'},
+                                'username': {'type': 'string'}
+                            }
+                        },
+                        'max_diff_users': {
+                            'type': 'object',
+                            'properties': {
+                                'total': {'type': 'integer'},
+                                'username1': {'type': 'string'},
+                                'username2': {'type': 'string'}
+                            }
+                        },
+                        'max_points_user': {
+                            'type': 'object',
+                            'properties': {
+                                'total': {'type': 'integer'},
+                                'username': {'type': 'string'}
+                            }
+                        },
+                        'min_diff_users': {
+                            'type': 'object',
+                            'properties': {
+                                'total': {'type': 'integer'},
+                                'username1': {'type': 'string'},
+                                'username2': {'type': 'string'}
+                            }
+                        },
+                        'streak_users': {
+                            'type': 'array',
+                            'items': {
+                                'type': 'object',
+                                'properties': {
+                                    'username': {'type': 'string'}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    })
     def get_stats():
+        """Возвращает статистические данные системы."""
         # Пользователь с максимальным количеством достижений
         max_achievements_user = db.session.query(
             User.username,

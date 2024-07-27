@@ -1,6 +1,6 @@
 import pytest
 from app import app, db
-from app.models import User, Achievement, UserAchievement
+from models import User, Achievement, UserAchievement
 
 
 @pytest.fixture

@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import jsonify, request
 from sqlalchemy import func
 from flasgger import swag_from
@@ -68,6 +68,32 @@ def set_routes(app):
         db.session.commit()
         logger.info(f'User {data["username"]} added successfully')
         return jsonify({'message': 'User created successfully', 'user_id': new_user.id}), 201
+
+    @app.route('/users', methods=['GET'])
+    def get_users():
+        """Получить список всех пользователей
+        ---
+        responses:
+            200:
+                description: Список пользователей
+                schema:
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            id:
+                                type: integer
+                                description: Идентификатор пользователя
+                            username:
+                                type: string
+                                description: Имя пользователя
+                            language:
+                                type: string
+                                description: Язык пользователя
+        """
+        users = User.query.all()
+        users_list = [{'id': user.id, 'username': user.username, 'language': user.language} for user in users]
+        return jsonify(users_list)
 
     @app.route('/user/<int:user_id>', methods=['GET'])
     @swag_from({
@@ -295,32 +321,109 @@ def set_routes(app):
 
     @app.route('/stats', methods=['GET'])
     def get_stats():
-        x = func.count(UserAchievement.id)
-        max_achievements_user = db.session.query(User, func.count(UserAchievement.id).label('total')).join(
-            UserAchievement).group_by(User.id).order_by(func.count(UserAchievement.id).desc()).first()
-        max_points_user = db.session.query(User, func.sum(Achievement.points).label('total')).join(
-            UserAchievement).join(
-            Achievement).group_by(User.id).order_by(func.sum(Achievement.points).desc()).first()
+        # Пользователь с максимальным количеством достижений
+        max_achievements_user = db.session.query(
+            User.username,
+            func.count(UserAchievement.id).label('total')
+        ).join(UserAchievement).group_by(User.id, User.username).order_by(func.count(UserAchievement.id).desc()).first()
 
-        user_achievements = db.session.query(User.id, func.sum(Achievement.points).label('total')).join(
-            UserAchievement).join(Achievement).group_by(User.id).all()
+        # Пользователь с максимальным количеством очков
+        max_points_user = db.session.query(
+            User.username,
+            func.sum(Achievement.points).label('total')
+        ).select_from(User).join(UserAchievement, User.id == UserAchievement.user_id).join(Achievement,
+                                                                                           UserAchievement.achievement_id == Achievement.id).group_by(
+            User.id).order_by(func.sum(Achievement.points).desc()).first()
 
-        max_diff_users = max(user_achievements, key=lambda x: x.total, default=None)
-        min_diff_users = min(user_achievements, key=lambda x: x.total, default=None)
+        # Пользователи с их суммой очков
+        user_achievements = db.session.query(
+            User.username,
+            func.sum(Achievement.points).label('total')
+        ).select_from(User).join(UserAchievement, User.id == UserAchievement.user_id).join(Achievement,
+                                                                                           UserAchievement.achievement_id == Achievement.id).group_by(
+            User.id).all()
 
-        streak_users = db.session.query(User).join(UserAchievement).group_by(User.id).having(
-            func.count(func.distinct(func.date(UserAchievement.date_awarded))) >= 7).all()
+        # Пользователи с максимальной разностью очков
+        if len(user_achievements) > 1:
+            max_diff_user1 = max(user_achievements, key=lambda x: x.total)
+            max_diff_user2 = min(user_achievements, key=lambda x: x.total)
+        else:
+            max_diff_user1 = max_diff_user2 = None
 
+        sorted_user_achievements = sorted(user_achievements, key=lambda l: l.total)
+        min_diff_user1 = sorted_user_achievements[0]
+        min_diff_user2 = sorted_user_achievements[1]
+        min_length = min_diff_user2.total - min_diff_user1.total
+        for i in range(2, len(sorted_user_achievements)):
+            length = sorted_user_achievements[i].total - min_diff_user2.total
+            if length < min_length:
+                min_diff_user1 = min_diff_user2
+                min_diff_user2 = sorted_user_achievements[i]
+                min_length = length
+
+        # Пользователи, которые получали достижения 7 дней подряд
+        from collections import defaultdict
+
+        def get_user_achievements_dict():
+            users_achievements = db.session.query(
+                User.id,
+                User.username,
+                UserAchievement.date_awarded
+            ).join(UserAchievement).order_by(User.id, UserAchievement.date_awarded).all()
+
+            user_achievements_dict = defaultdict(list)
+
+            for user_id, username, date_awarded in users_achievements:
+                user_achievements_dict[username].append(date_awarded)
+
+            # функция, которая проверяет, есть ли в списке временных меток достижения в 7 последовательных дней
+            def has_streak_of_seven_days(dates):
+                # Сортируем даты на случай, если они не отсортированы
+                sorted_dates = sorted(dates)
+
+                streak = 1
+                for i in range(1, len(sorted_dates)):
+                    # Проверяем, является ли текущая дата следующей по отношению к предыдущей
+                    if sorted_dates[i].date() - sorted_dates[i - 1].date() == timedelta(days=1):
+                        streak += 1
+                        # Если нашли 7 последовательных дней, возвращаем True
+                        if streak == 7:
+                            return True
+                    else:
+                        streak = 1
+
+                return False
+
+            streak_users = []
+            for user_name, dates in user_achievements_dict.items():
+                if has_streak_of_seven_days(dates):
+                    streak_users.append(user_name)
+
+            return streak_users
+
+        streak_users = get_user_achievements_dict()
+
+        # Сбор статистики
         stats = {
-            'max_achievements_user': {'username': max_achievements_user.User.username,
-                                      'total': max_achievements_user.total} if max_achievements_user else None,
-            'max_points_user': {'username': max_points_user.User.username,
-                                'total': max_points_user.total} if max_points_user else None,
-            'max_diff_users': {'username': max_diff_users.User.username,
-                               'total': max_diff_users.total} if max_diff_users else None,
-            'min_diff_users': {'username': min_diff_users.User.username,
-                               'total': min_diff_users.total} if min_diff_users else None,
-            'streak_users': [{'username': user.username} for user in streak_users]
+            'max_achievements_user': {
+                'username': max_achievements_user.username if max_achievements_user else None,
+                'total': max_achievements_user.total if max_achievements_user else 0
+            },
+            'max_points_user': {
+                'username': max_points_user.username if max_points_user else None,
+                'total': max_points_user.total if max_points_user else 0
+            },
+            'max_diff_users': {
+                'username1': max_diff_user1.username if max_diff_user1 else None,
+                'username2': max_diff_user2.username if max_diff_user2 else None,
+                'total': max_diff_user1.total - max_diff_user2.total
+            },
+            'min_diff_users': {
+                'username1': min_diff_user1.username if min_diff_user1 else None,
+                'username2': min_diff_user2.username if min_diff_user2 else None,
+                'total': min_length
+            },
+            'streak_users': [{'username': username} for username in streak_users]
         }
 
         return jsonify(stats)

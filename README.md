@@ -1,19 +1,9 @@
-# Прочти меня!
+# Readme!
 
-# for creating nginx image:
-``` sh
-docker build -f .\dockers\Dockerfile_nginx -t elvis_nginx_img .
-```
-# for create nginx container:
-```sh 
-docker run --name elvis_nginx -d -p 80:80 elvis_nginx_img
-``` 
+# Start Application:
+for start App use command 'docker compose up -d --build'
 
-# for creating app image:
-``` sh 
-docker build -f .\dockers\Dockerfile_app -t elvis_app .
-```
-# for creating app container:
-``` sh 
-docker run --name elvis_app -d -p 5000:5000 elvis_app
-```
+# Restoring:
+for restore postgres backup choose only checkbox 'data':
+![img.png](img.png)
+and choose file with name 'pg_data.backup' in project directory.

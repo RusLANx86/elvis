@@ -12,7 +12,7 @@ from routes import set_routes
 app = Flask(__name__)
 
 # Инициализация приложения Flask и конфигурации базы данных
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:q1w2e3r4@192.168.1.30:5432/achievements_db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:q1w2e3r4@db/achievements_db'
 # app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.dirname(__file__)}/achievements.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SWAGGER'] = {

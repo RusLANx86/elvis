@@ -1,4 +1,25 @@
-FROM ubuntu:latest
-LABEL authors="Ruslan"
+# Используем официальный образ Python в качестве базового
+FROM python:3.8.19
 
-ENTRYPOINT ["top", "-b"]
+# Устанавливаем рабочую директорию в контейнере
+WORKDIR /app
+
+# Копируем файл с зависимостями в контейнер
+COPY ../req_linx_py3.8.19.txt requirements.txt
+
+# Устанавливаем зависимости
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Копируем весь код приложения в рабочую директорию контейнера
+COPY .. .
+
+# Устанавливаем переменные окружения
+ENV FLASK_APP=app.py
+ENV FLASK_RUN_HOST=0.0.0.0
+
+# Открываем порт, на котором будет работать наше приложение
+EXPOSE 5000
+
+# Команда для запуска приложения
+CMD ["flask", "run"]

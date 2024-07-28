@@ -12,10 +12,24 @@ from routes import set_routes
 app = Flask(__name__)
 
 # Инициализация приложения Flask и конфигурации базы данных
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:q1w2e3r4@localhost:5432/achievements_db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:q1w2e3r4@192.168.1.30:5432/achievements_db'
 # app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.dirname(__file__)}/achievements.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
+app.config['SWAGGER'] = {
+    'title': 'Тестовое задание. Разработка API для работы с достижениями',
+    'uiversion': 3,
+    'description': 'Это простой сервер для работы с достижениями пользователей. Вы можете добавлять пользователей, добавлять достижения и выдавать их пользователям.',
+    'termsOfService': 'http://example.com/terms/',
+    'contact': {
+        'name': 'API Support',
+        'url': 'http://www.example.com/support',
+        'email': 'support@example.com'
+    },
+    'license': {
+        'name': 'Apache 2.0',
+        'url': 'http://www.apache.org/licenses/LICENSE-2.0.html'
+    }
+}
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, filename='app.log', filemode='w')
 logger = logging.getLogger(__name__)
